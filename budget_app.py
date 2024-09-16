@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 
 # Connexion à la base de données SQLite
-conn = sqlite3.connect('budget_app.db')
+conn = sqlite3.connect('/Users/f.b/Desktop/Data_Science/Budget/Expenses/budget_app.db')
 cursor = conn.cursor()
 
 # Créer les tables si elles n'existent pas encore
@@ -41,23 +41,18 @@ conn.commit()
 st.title("Suivi quotidien de budget")
 
 # Initialisation des postes de dépenses prédéfinis
-postes_depenses = ["Epargne",
-                   "Logement", 
-                   "Alimentation (Cantine + Courses)", 
-                   "Transport (SNCF + RATP)",
-                   "Electricité",
-                   "Internet + Mobile",
-                   "Netflix",
-                   "Apple Storage",
-                   "Crédit Conso",
-                   "Basic Fit", 
-                   "Loisirs",
-                   "W", 
-                   "Autres"]
+postes_depenses = ["Epargne", "Logement", "Alimentation (Cantine + Courses)", 
+                   "Transport (SNCF + RATP)", "Electricité", "Internet + Mobile",
+                   "Netflix", "Apple Storage", "Crédit Conso", "Basic Fit", 
+                   "Loisirs", "W", "Autres"]
 
-mois_courant = datetime.today().strftime("%Y-%m")
+# Sélecteur de mois
+mois_selectionne = st.selectbox(
+    "Sélectionnez le mois pour le suivi",
+    options=pd.date_range(start="2023-01-01", end=datetime.today(), freq='M').strftime('%Y-%m')
+)
 
-# Charger les revenus du mois courant
+# Charger les revenus pour un mois spécifique
 def charger_revenu(mois):
     cursor.execute("SELECT revenu FROM revenus WHERE mois=?", (mois,))
     result = cursor.fetchone()
@@ -71,7 +66,7 @@ def sauvegarder_revenu(mois, revenu):
     ''', (mois, revenu))
     conn.commit()
 
-# Charger les budgets du mois courant depuis SQLite
+# Charger les budgets pour un mois spécifique
 def charger_budgets(mois):
     cursor.execute("SELECT poste_depense, budget FROM budgets WHERE mois=?", (mois,))
     lignes = cursor.fetchall()
@@ -89,7 +84,7 @@ def sauvegarder_budget(mois, budgets):
         ''', (mois, poste, montant))
     conn.commit()
 
-# Charger les transactions du mois courant depuis SQLite
+# Charger les transactions pour un mois spécifique
 def charger_transactions(mois):
     cursor.execute("SELECT id, date, poste_depense, description, montant FROM transactions WHERE mois=?", (mois,))
     lignes = cursor.fetchall()
@@ -104,32 +99,22 @@ def ajouter_transaction(date, poste_depense, description, montant, mois):
     ''', (date, poste_depense, description, montant, mois))
     conn.commit()
 
-# Supprimer une transaction
-def supprimer_transaction(transaction_id):
-    cursor.execute("DELETE FROM transactions WHERE id=?", (transaction_id,))
-    conn.commit()
-
-# Supprimer un budget (optionnel si besoin)
-def supprimer_budget(mois, poste_depense):
-    cursor.execute("DELETE FROM budgets WHERE mois=? AND poste_depense=?", (mois, poste_depense))
-    conn.commit()
-
 # Interface pour définir le revenu et les budgets
-st.subheader(f"Revenu pour le mois de {mois_courant}")
-revenu = st.number_input("Revenu mensuel (€)", min_value=0.0, value=charger_revenu(mois_courant), step=100.0)
+st.subheader(f"Revenu pour le mois de {mois_selectionne}")
+revenu = st.number_input("Revenu mensuel (€)", min_value=0.0, value=charger_revenu(mois_selectionne), step=100.0)
 
 if st.button("Sauvegarder le revenu"):
-    sauvegarder_revenu(mois_courant, revenu)
+    sauvegarder_revenu(mois_selectionne, revenu)
     st.success("Le revenu a été enregistré avec succès !")
 
 # Interface pour définir le budget pour chaque poste de dépense
-st.subheader(f"Définir le budget pour le mois de {mois_courant}")
-budgets = charger_budgets(mois_courant)
+st.subheader(f"Définir le budget pour le mois de {mois_selectionne}")
+budgets = charger_budgets(mois_selectionne)
 for poste in postes_depenses:
     budgets[poste] = st.number_input(f"Budget pour {poste} (€)", min_value=0.0, value=budgets[poste], step=10.0)
 
 if st.button("Sauvegarder le budget"):
-    sauvegarder_budget(mois_courant, budgets)
+    sauvegarder_budget(mois_selectionne, budgets)
     st.success("Le budget a été enregistré avec succès !")
 
 # Formulaire pour ajouter une nouvelle dépense
@@ -143,12 +128,12 @@ with st.form("ajout_transaction"):
     
     if submit:
         if montant and description:
-            ajouter_transaction(date, poste_depense, description, montant, mois_courant)
+            ajouter_transaction(date, poste_depense, description, montant, mois_selectionne)
             st.success(f"Dépense de {montant} € pour {poste_depense} ajoutée !")
 
-# Afficher les transactions du mois en cours
-st.subheader(f"Transactions du mois de {mois_courant}")
-transactions = charger_transactions(mois_courant)
+# Afficher les transactions du mois sélectionné
+st.subheader(f"Transactions du mois de {mois_selectionne}")
+transactions = charger_transactions(mois_selectionne)
 if not transactions.empty:
     st.dataframe(transactions)
 
@@ -181,4 +166,4 @@ if not transactions.empty:
     st.metric(label="Revenu - Dépenses", value=f"{difference_revenu_depense:.2f} €", delta_color="normal" if difference_revenu_depense >= 0 else "inverse")
 
 else:
-    st.write("Aucune transaction enregistrée pour le mois courant.")
+    st.write("Aucune transaction enregistrée pour le mois sélectionné.")
