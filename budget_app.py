@@ -49,7 +49,7 @@ postes_depenses = ["Epargne", "Logement", "Alimentation (Cantine + Courses)",
 # Sélecteur de mois
 mois_selectionne = st.selectbox(
     "Sélectionnez le mois pour le suivi",
-    options=pd.date_range(start="2023-01-01", end=datetime.today(), freq='M').strftime('%Y-%m')
+    options=pd.date_range(start="2024-01-01", end="2026-01-01", freq='M').strftime('%Y-%m')
 )
 
 # Charger les revenus pour un mois spécifique
@@ -116,6 +116,10 @@ for poste in postes_depenses:
 if st.button("Sauvegarder le budget"):
     sauvegarder_budget(mois_selectionne, budgets)
     st.success("Le budget a été enregistré avec succès !")
+    total_depenses = sum(budgets.values())
+    
+    st.write(f"Le budget total est de : {total_depenses} €")
+    st.write(f"Le reste est donc de : {revenu - total_depenses} €")
 
 # Formulaire pour ajouter une nouvelle dépense
 st.subheader("Ajouter une nouvelle dépense")
